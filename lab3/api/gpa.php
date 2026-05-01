@@ -88,7 +88,22 @@ switch ($action) {
         $stmt->execute([':student_id' => $studentId]);
         $history = $stmt->fetchAll();
 
-        echo json_encode(['history' => $history]);
+        foreach ($history as &$semester) {
+            $details = $pdo->prepare(
+                'SELECT c.name, c.credits, g.grade
+                 FROM courses c
+                 LEFT JOIN grades g ON g.course_id = c.id AND g.student_id = :student_id AND g.semester_id = :semester_id
+                 WHERE c.semester_id = :semester_id
+                 ORDER BY c.name'
+            );
+            $details->execute([
+                ':student_id' => $studentId,
+                ':semester_id' => $semester['semester_id'],
+            ]);
+            $semester['courses'] = $details->fetchAll();
+        }
+
+        echo json_encode($history);
         break;
 
     default:

@@ -109,34 +109,154 @@ class AdminController {
     }
     
     private function courses() {
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $action = $_POST['action'] ?? '';
+
+            if ($action === 'create') {
+                $name = trim($_POST['name'] ?? '');
+                $semesterId = (int) ($_POST['semester_id'] ?? 0);
+                $credits = (int) ($_POST['credits'] ?? 0);
+
+                if ($name === '' || !$semesterId || $credits <= 0) {
+                    flash('danger', 'Course name, semester and credits are required.');
+                } else {
+                    $this->courseModel->create($name, $semesterId, $credits);
+                    flash('success', 'Course created successfully.');
+                }
+            }
+
+            if ($action === 'delete') {
+                $id = (int) ($_POST['id'] ?? 0);
+                if ($id > 0) {
+                    if ($this->courseModel->delete($id)) {
+                        flash('success', 'Course deleted successfully.');
+                    } else {
+                        flash('danger', 'Course could not be deleted.');
+                    }
+                }
+            }
+
+            header('Location: index.php?page=admin.courses');
+            exit;
+        }
+
         $courses = $this->courseModel->getAll();
         $semesters = $this->semesterModel->getAll();
         require_once 'views/admin/courses.php';
     }
     
     private function professors() {
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $action = $_POST['action'] ?? '';
+
+            if ($action === 'create') {
+                $name = trim($_POST['name'] ?? '');
+                $email = trim($_POST['email'] ?? '');
+                $password = trim($_POST['password'] ?? '');
+
+                if ($name === '' || $email === '') {
+                    flash('danger', 'Name and email are required.');
+                } elseif ($this->userModel->emailExists($email)) {
+                    flash('danger', 'Email already exists.');
+                } else {
+                    if ($password === '') {
+                        $password = 'password123';
+                    }
+                    $this->userModel->create($name, $email, $password, 'professor');
+                    flash('success', 'Professor account created successfully.');
+                }
+            }
+
+            if ($action === 'delete') {
+                $id = (int) ($_POST['id'] ?? 0);
+                if ($id > 0) {
+                    $this->pdo->prepare('DELETE FROM assignments WHERE professor_id = :id')->execute([':id' => $id]);
+                    if ($this->userModel->delete($id)) {
+                        flash('success', 'Professor removed successfully.');
+                    } else {
+                        flash('danger', 'Professor could not be removed.');
+                    }
+                }
+            }
+
+            header('Location: index.php?page=admin.professors');
+            exit;
+        }
+
         $professors = $this->userModel->getAllByRole('professor');
         require_once 'views/admin/professors.php';
     }
     
     private function students() {
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $action = $_POST['action'] ?? '';
+
+            if ($action === 'create') {
+                $name = trim($_POST['name'] ?? '');
+                $email = trim($_POST['email'] ?? '');
+                $password = trim($_POST['password'] ?? '');
+
+                if ($name === '' || $email === '') {
+                    flash('danger', 'Name and email are required.');
+                } elseif ($this->userModel->emailExists($email)) {
+                    flash('danger', 'Email already exists.');
+                } else {
+                    if ($password === '') {
+                        $password = 'password123';
+                    }
+                    $this->userModel->create($name, $email, $password, 'student');
+                    flash('success', 'Student account created successfully.');
+                }
+            }
+
+            if ($action === 'delete') {
+                $id = (int) ($_POST['id'] ?? 0);
+                if ($id > 0) {
+                    $this->pdo->prepare('DELETE FROM grades WHERE student_id = :id')->execute([':id' => $id]);
+                    $this->pdo->prepare('DELETE FROM enrollments WHERE student_id = :id')->execute([':id' => $id]);
+                    $this->pdo->prepare('DELETE FROM gpa_records WHERE student_id = :id')->execute([':id' => $id]);
+                    if ($this->userModel->delete($id)) {
+                        flash('success', 'Student removed successfully.');
+                    } else {
+                        flash('danger', 'Student could not be removed.');
+                    }
+                }
+            }
+
+            header('Location: index.php?page=admin.students');
+            exit;
+        }
+
         $students = $this->userModel->getAllByRole('student');
         require_once 'views/admin/students.php';
     }
     
     private function enrollments() {
-        $studentId = $_GET['student_id'] ?? 0;
         $students = $this->userModel->getAllByRole('student');
-        
-        if ($studentId) {
-            $allSemesters = $this->semesterModel->getAll();
-            $enrolledStatus = [];
-            foreach ($allSemesters as $semester) {
-                $enrolledStatus[$semester['id']] = $this->enrollmentModel->isEnrolled($studentId, $semester['id']);
+        $allSemesters = $this->semesterModel->getAll();
+        $selectedStudent = null;
+        $enrolledSemesterIds = [];
+
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $studentId = (int) ($_POST['student_id'] ?? 0);
+            $semesterIds = array_map('intval', $_POST['semester_ids'] ?? []);
+
+            if ($studentId > 0) {
+                $this->enrollmentModel->updateForStudent($studentId, $semesterIds);
+                flash('success', 'Enrollments updated successfully.');
+                header('Location: index.php?page=admin.enrollments&student_id=' . $studentId);
+                exit;
             }
-            $selectedStudent = $this->userModel->findById($studentId);
         }
-        
+
+        $selectedId = (int) ($_GET['student_id'] ?? 0);
+        if ($selectedId) {
+            $selectedStudent = $this->userModel->findById($selectedId);
+            if ($selectedStudent) {
+                $enrolledSemesterIds = $this->enrollmentModel->getStudentSemesterIds($selectedId);
+            }
+        }
+
         require_once 'views/admin/enrollments.php';
     }
 }

@@ -25,6 +25,7 @@ $semesters = $semesters ?? [];
 
     <div class="container mt-4">
         <h2>Grade Entry</h2>
+        <p class="text-muted">Choose semester and course, then enter grades for each student.</p>
         
         <div id="feedback"></div>
         

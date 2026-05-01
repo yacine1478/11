@@ -9,15 +9,22 @@
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
         <div class="container">
             <a class="navbar-brand" href="#">Grade Manager - Student</a>
-            <div class="navbar-nav ms-auto">
-                <span class="nav-link text-light">Welcome, <?= htmlspecialchars($_SESSION['name']) ?></span>
-                <a class="nav-link" href="index.php?page=logout">Logout</a>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item"><a class="nav-link active" href="index.php?page=student.dashboard">Current</a></li>
+                    <li class="nav-item"><a class="nav-link" href="index.php?page=student.history">History</a></li>
+                </ul>
+                <div class="navbar-nav ms-auto">
+                    <span class="nav-link text-light">Welcome, <?= htmlspecialchars($_SESSION['name']) ?></span>
+                    <a class="nav-link" href="index.php?page=logout">Logout</a>
+                </div>
             </div>
         </div>
     </nav>
 
     <div class="container mt-4">
         <h2>My Grades</h2>
+        <p class="text-muted">Only grades entered by your professor are shown here.</p>
         <div id="gradesContent">
             <div class="alert alert-info">Loading your grades...</div>
         </div>
